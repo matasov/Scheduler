@@ -61,9 +61,7 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         final SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
 
         CalendarView calendarView = (CalendarView) findViewById(R.id.calendarView);
-        System.out.println("start update events");
         calendarView.setEvents(UpdateShowEvents(db));
-        System.out.println("end update events");
         calendarView.setOnDayClickListener(eventDay ->//eventDay.getCalendar().getTime()
                 updateEventsForDate(db, sdf.format(eventDay.getCalendar().getTime())));
 
@@ -71,7 +69,6 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         addEvButton.setOnClickListener(v -> {
             if (!editTitle.getText().toString().equals(""))
                 for (Calendar calendar : calendarView.getSelectedDates()) {
-                    System.out.println();
                     addEvent(db, sdf.format(calendar.getTime()), editTitle.getText().toString(), editEvent.getText().toString());
                 }
         });
@@ -79,31 +76,10 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         Button delEvButton = (Button) findViewById(R.id.delBtn);
         delEvButton.setOnClickListener(v -> {
             for (Calendar calendar : calendarView.getSelectedDates()) {
-                System.out.println();
                 deleteEvent(db, sdf.format(calendar.getTime()));
             }
         });
-        //dateEvent.setText(sdf.format(new Date()));
-
-        /*calendarView.setOnDateChangeListener(new CalendarView.OnDateChangeListener() {
-            public void onSelectedDayChange(CalendarView view, int year, int month, int dayOfMonth) {
-                String monthS = (month + 1) + "";
-                if (month < 10) {
-                    monthS = "0" + monthS;
-                }
-                String dayOfMonthS = dayOfMonth + "";
-                if (dayOfMonth < 10) {
-                    dayOfMonthS = "0" + dayOfMonthS;
-                }
-                String text = year + "/" + (month < 11 ? "0" + monthS : monthS) + "/" + (dayOfMonth < 10 ? "0" + dayOfMonthS : dayOfMonthS);
-                dateEvent.setText(text);
-                try {
-                    calendarView.setDate(sdf.parse(text).getTime(), true, true);
-                } catch (ParseException e) {
-                    //do nothing
-                }
-            }
-        });*/
+        
     }
 
     private String getNormalDateFromCalendar(String fromCalendar) {
@@ -201,7 +177,6 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
 
     private Hashtable<String, List<String>> checkData(SQLiteDatabase db, String date) {
         Hashtable<String, List<String>> result = new Hashtable();
-        System.out.println("select * from schedule where date = '" + getNormalDateFromCalendar(date) + "'");
         String sqlQuery = "select * from schedule where date = '" + getNormalDateFromCalendar(date) + "'";
         Cursor c = db.rawQuery(sqlQuery, null);
         if (c != null) {
@@ -234,13 +209,11 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
     class DBHelper extends SQLiteOpenHelper {
 
         public DBHelper(Context context) {
-            // конструктор суперкласса
             super(context, "ForTestDB", null, 1);
         }
 
         @Override
         public void onCreate(SQLiteDatabase db) {
-            // создаем таблицу с полями
             db.execSQL("create table schedule ("
                     + "id integer primary key autoincrement,"
                     + "date text,"
