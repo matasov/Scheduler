@@ -1,6 +1,7 @@
 package com.matas.scheduler;
 
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -17,6 +18,7 @@ import com.applandeo.materialcalendarview.CalendarView;
 //import android.widget.CalendarView;
 import com.applandeo.materialcalendarview.EventDay;
 import com.applandeo.materialcalendarview.listeners.OnSelectDateListener;
+import com.matas.scheduler.adapters.DBHelper;
 
 import android.content.ContentValues;
 
@@ -40,8 +42,10 @@ import java.util.ListIterator;
 
 public class MainActivity extends AppCompatActivity implements OnSelectDateListener {
 
+    private static DBHelper dbHelper;
+    private static MainActivity _this;
+
     private CalendarView calendarView;
-    private DBHelper dbHelper;
     private TextView dateShow;
     private EditText editTitle;
     private MultiAutoCompleteTextView editEvent;
@@ -50,22 +54,28 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        _this = this;
         calendarView = (CalendarView) findViewById(R.id.calendarView);
         dateShow = (TextView) findViewById(R.id.dateShowText);
-        editTitle = (EditText) findViewById(R.id.editTitle);
-        editEvent = (MultiAutoCompleteTextView) findViewById(R.id.editEvent);
+//        editTitle = (EditText) findViewById(R.id.editTitle);
+//        editEvent = (MultiAutoCompleteTextView) findViewById(R.id.editEvent);
         dbHelper = new DBHelper(this);
         final SQLiteDatabase db = dbHelper.getReadableDatabase();
-
+        //deleteAllData(db);
         //final TextView dateEvent = (TextView) findViewById(R.id.textView);
         final SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
 
         CalendarView calendarView = (CalendarView) findViewById(R.id.calendarView);
         calendarView.setEvents(UpdateShowEvents(db));
-        calendarView.setOnDayClickListener(eventDay ->//eventDay.getCalendar().getTime()
-                updateEventsForDate(db, sdf.format(eventDay.getCalendar().getTime())));
+        /*calendarView.setOnDayClickListener(eventDay ->//eventDay.getCalendar().getTime()
+                updateEventsForDate(db, sdf.format(eventDay.getCalendar().getTime())));*/
+        calendarView.setOnDayClickListener(eventDay -> {
+            Intent simpleEventIntent = new Intent(this, EventsActivity.class);
+            simpleEventIntent.putExtra("date", getNormalDateFromCalendar(sdf.format(eventDay.getCalendar().getTime())));
+            startActivity(simpleEventIntent);
+        });
 
-        Button addEvButton = (Button) findViewById(R.id.saveBtn);
+        /*Button addEvButton = (Button) findViewById(R.id.saveBtn);
         addEvButton.setOnClickListener(v -> {
             if (!editTitle.getText().toString().equals(""))
                 for (Calendar calendar : calendarView.getSelectedDates()) {
@@ -78,8 +88,8 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
             for (Calendar calendar : calendarView.getSelectedDates()) {
                 deleteEvent(db, sdf.format(calendar.getTime()));
             }
-        });
-        
+        });*/
+
     }
 
     private String getNormalDateFromCalendar(String fromCalendar) {
@@ -98,8 +108,8 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         Hashtable<String, List<String>> tableData = checkData(db, date);
         if (!tableData.isEmpty()) {
             ArrayList<String> line = (ArrayList<String>) tableData.get(dateReal);
-            editTitle.setText(line.get(2));
-            editEvent.setText(line.get(3));
+            editTitle.setText(line.get(3));
+            editEvent.setText(line.get(4));
         } else {
             editTitle.setText("");
             editEvent.setText("");
@@ -115,12 +125,12 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
             String[] separated = setIncrementDateToCalendar(line.get(1)).split("/");
             Calendar calendar = Calendar.getInstance();
             calendar.set(Integer.parseInt(separated[0]), Integer.parseInt(separated[1]), Integer.parseInt(separated[2]));
-            System.out.println("try add event for date: " + calendar.toString());
-            String title = line.get(2);
-            if (!title.equals("")) {
-                title = Character.toString(title.charAt(0));
-            } else {
-                title = "E";
+            String title = "Ev";
+            if (!line.get(3).equals("")) {
+                title = Character.toString(line.get(3).charAt(0));
+                if (line.get(3).length() > 1) {
+                    title += Character.toString(line.get(3).charAt(1));
+                }
             }
             events.add(new EventDay(calendar, getCircleDrawableWithText(this, title)));
         }
@@ -129,7 +139,6 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
                 Toast.LENGTH_SHORT).show();
         return events;
     }
-
 
     private void addEvent(SQLiteDatabase db, String date, String title, String event) {
         String realDate = getNormalDateFromCalendar(date);
@@ -143,8 +152,11 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         } else {
             ContentValues cv = new ContentValues();
             cv.put("date", realDate);
+            cv.put("time", "00:00");
             cv.put("title", title);
             cv.put("event", event);
+            cv.put("alarm", "1");
+            cv.put("alarm_sound", "");
             db.insert("schedule", null, cv);
         }
         calendarView.setEvents(UpdateShowEvents(db));
@@ -173,6 +185,11 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         }
         c.close();
         return result;
+    }
+
+    //for test
+    private void deleteAllData(SQLiteDatabase db) {
+        db.delete("schedule", null, null);
     }
 
     private Hashtable<String, List<String>> checkData(SQLiteDatabase db, String date) {
@@ -206,10 +223,10 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
         return new LayerDrawable(layers);
     }
 
-    class DBHelper extends SQLiteOpenHelper {
+    /*class DBHelper extends SQLiteOpenHelper {
 
         public DBHelper(Context context) {
-            super(context, "ForTestDB", null, 1);
+            super(context, "ForTestDB", null, 2);
         }
 
         @Override
@@ -217,14 +234,21 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
             db.execSQL("create table schedule ("
                     + "id integer primary key autoincrement,"
                     + "date text,"
+                    + "time text,"
                     + "title text,"
-                    + "event text" + ");");
+                    + "event text,"
+                    + "alarm text,"
+                    + "alarm_sound text" + ");");
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 
         }
+    }*/
+
+    public static DBHelper getDbHelper() {
+        return dbHelper;
     }
 
     @Override
@@ -233,5 +257,9 @@ public class MainActivity extends AppCompatActivity implements OnSelectDateListe
                 Toast.makeText(getApplicationContext(),
                         calendar.getTime().toString(),
                         Toast.LENGTH_SHORT).show());
+    }
+
+    public static void refreshData() {
+        _this.calendarView.setEvents(_this.UpdateShowEvents(dbHelper.getReadableDatabase()));
     }
 }
